@@ -1,0 +1,49 @@
+[prometheus]
+url = "https://prometheus.monitoring.svc.cluster.local:9090"
+timeout_seconds = 5
+verify_tls = true
+bearer_token_env = "PROMETHEUS_BEARER_TOKEN"
+
+[release]
+service = "checkout"
+environment = "production"
+candidate = "2026.07.29-1"
+window = "10m"
+step = "30s"
+
+[[checks]]
+name = "доля ошибок 5xx у кандидата"
+query = '''
+sum(rate(http_requests_total{service="${service}",environment="${environment}",version="${candidate}",status=~"5.."}[2m]))
+/
+clamp_min(sum(rate(http_requests_total{service="${service}",environment="${environment}",version="${candidate}"}[2m])), 0.001)
+'''
+comparator = "lte"
+threshold = 0.01
+reducer = "max"
+on_no_data = "error"
+
+[[checks]]
+name = "p95 задержки кандидата"
+query = '''
+histogram_quantile(
+  0.95,
+  sum by (le) (
+    rate(http_request_duration_seconds_bucket{service="${service}",environment="${environment}",version="${candidate}"}[2m])
+  )
+)
+'''
+comparator = "lte"
+threshold = 0.4
+reducer = "max"
+on_no_data = "error"
+
+[[checks]]
+name = "минимальный трафик кандидата"
+query = '''
+sum(increase(http_requests_total{service="${service}",environment="${environment}",version="${candidate}"}[5m]))
+'''
+comparator = "gte"
+threshold = 100
+reducer = "last"
+on_no_data = "fail"
