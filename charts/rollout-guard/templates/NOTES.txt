@@ -1,0 +1,7 @@
+Rollout Guard запущен как Kubernetes Job:
+
+  kubectl get job {{ include "rollout-guard.fullname" . }}-{{ .Release.Revision }}
+  kubectl logs job/{{ include "rollout-guard.fullname" . }}-{{ .Release.Revision }}
+
+Код 0 разрешает продолжить релиз, код 2 требует отката, а код 1 означает, что
+решение нельзя принять из-за конфигурации, Prometheus или качества данных.

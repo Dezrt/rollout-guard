@@ -1,0 +1,16 @@
+apiVersion: v2
+name: rollout-guard
+description: SLO-проверка релиза в виде Kubernetes Job
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.25.0-0"
+keywords:
+  - sre
+  - prometheus
+  - progressive-delivery
+home: https://github.com/Dezrt/rollout-guard
+sources:
+  - https://github.com/Dezrt/rollout-guard
+maintainers:
+  - name: Dezrt
