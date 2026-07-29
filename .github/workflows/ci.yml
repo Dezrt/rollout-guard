@@ -1,0 +1,94 @@
+name: Проверки
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v7
+
+      - name: Установить Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Установить пакет
+        run: python -m pip install -e .
+
+      - name: Запустить тесты
+        run: python -m unittest discover -s tests -v
+
+      - name: Проверить компиляцию модулей
+        run: python -m compileall -q src tests
+
+  container:
+    name: Сборка контейнера
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v7
+
+      - name: Настроить Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Собрать runtime-образ
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: runtime
+          push: false
+          tags: rollout-guard:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security:
+    name: Проверка файлов Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v7
+
+      - name: Просканировать репозиторий
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v7
+
+      - name: Установить Helm
+        uses: azure/setup-helm@v5.0.1
+
+      - name: Проверить chart
+        run: helm lint charts/rollout-guard
+
+      - name: Отрендерить манифесты
+        run: helm template rollout-guard charts/rollout-guard >/dev/null
