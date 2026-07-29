@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rollout-guard.fullname" . }}
+  labels:
+    {{- include "rollout-guard.labels" . | nindent 4 }}
+data:
+  guard.toml: |
+    [prometheus]
+    url = {{ .Values.prometheus.url | quote }}
+    timeout_seconds = {{ .Values.prometheus.timeoutSeconds }}
+    verify_tls = {{ .Values.prometheus.verifyTLS }}
+    {{- if .Values.prometheus.bearerToken.existingSecret }}
+    bearer_token_env = "PROMETHEUS_BEARER_TOKEN"
+    {{- end }}
+
+    [release]
+    service = {{ .Values.release.service | quote }}
+    environment = {{ .Values.release.environment | quote }}
+    candidate = {{ .Values.release.candidate | quote }}
+    window = {{ .Values.release.window | quote }}
+    step = {{ .Values.release.step | quote }}
+
+    {{- range .Values.checks }}
+    [[checks]]
+    name = {{ .name | quote }}
+    query = {{ .query | quote }}
+    comparator = {{ .comparator | quote }}
+    threshold = {{ .threshold }}
+    reducer = {{ default "max" .reducer | quote }}
+    on_no_data = {{ default "error" .onNoData | quote }}
+    allow_multiple_series = {{ default false .allowMultipleSeries }}
+
+    {{- end }}
+

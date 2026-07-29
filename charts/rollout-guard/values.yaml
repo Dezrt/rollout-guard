@@ -1,0 +1,78 @@
+image:
+  repository: ghcr.io/dezrt/rollout-guard
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+prometheus:
+  url: "http://prometheus-server.monitoring.svc.cluster.local"
+  timeoutSeconds: 5
+  verifyTLS: true
+  bearerToken:
+    existingSecret: ""
+    key: token
+
+release:
+  service: checkout
+  environment: production
+  candidate: "2026.07.29-1"
+  window: 10m
+  step: 30s
+
+checks:
+  - name: доля ошибок у кандидата
+    query: |
+      sum(rate(http_requests_total{service="${service}",version="${candidate}",status=~"5.."}[2m]))
+      /
+      clamp_min(sum(rate(http_requests_total{service="${service}",version="${candidate}"}[2m])), 0.001)
+    comparator: lte
+    threshold: 0.01
+    reducer: max
+    onNoData: error
+    allowMultipleSeries: false
+
+job:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  activeDeadlineSeconds: 900
+  # Если включено, Job становится Helm post-upgrade hook. Вместе с
+  # `helm upgrade --atomic` проваленная проверка приводит к откату релиза.
+  postUpgradeHook: false
+
+podAnnotations: {}
+podLabels: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountServiceAccountToken: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

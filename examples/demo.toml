@@ -1,0 +1,34 @@
+[prometheus]
+url = "http://prometheus:9090"
+timeout_seconds = 3
+
+[release]
+service = "checkout"
+environment = "demo"
+candidate = "2026.07.29-1"
+window = "2m"
+step = "15s"
+
+[[checks]]
+name = "доля ошибок у кандидата"
+query = "vector(0.004)"
+comparator = "lte"
+threshold = 0.01
+reducer = "max"
+on_no_data = "error"
+
+[[checks]]
+name = "p95 задержки кандидата"
+query = "vector(0.21)"
+comparator = "lte"
+threshold = 0.4
+reducer = "max"
+on_no_data = "error"
+
+[[checks]]
+name = "минимальное число запросов"
+query = "vector(180)"
+comparator = "gte"
+threshold = 100
+reducer = "last"
+on_no_data = "fail"

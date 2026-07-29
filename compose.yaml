@@ -1,0 +1,35 @@
+name: rollout-guard-demo
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.13.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=1h
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    read_only: true
+    tmpfs:
+      - /prometheus
+    security_opt:
+      - no-new-privileges:true
+
+  guard:
+    build:
+      context: .
+    profiles: ["gate"]
+    depends_on:
+      - prometheus
+    command:
+      - --config
+      - /config/demo.toml
+    volumes:
+      - ./examples:/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
